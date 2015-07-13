@@ -38,6 +38,7 @@ type SampleConfig struct {
 	StrOptional                *string               `json:"str_optional,omitempty" remoteconfig:"optional"`
 	StorageConfigOptional      *StorageConfig        `json:"storage_config_optional,omitempty" remoteconfig:"optional"`
 	StorageConfigSliceOptional []*StorageConfig      `json:"storage_config_slice_optional,omitempty" remoteconfig:"optional"`
+	StrMapOptional             map[string]*string    `json:"str_map_optional,omitempty" remoteconfig:"optional"`
 	SQSQueue                   *SQSQueueConfig       `json:"sqs_queue,omitempty"`
 	SQSClient                  *SQSClientConfig      `json:"sqs_client,omitempty"`
 	DynamoDBTable              *DynamoDBTableConfig  `json:"dynamodb_table,omitempty"`
@@ -45,6 +46,7 @@ type SampleConfig struct {
 	Str                        *string               `json:"str,omitempty"`
 	StorageConfig              *StorageConfig        `json:"storage_config,omitempty"`
 	StorageConfigSlice         []*StorageConfig      `json:"storage_config_slice,omitempty"`
+	StrMap                     map[string]*string    `json:"str_map,omitempty"`
 }
 
 func (s *RemoteConfigSuite) SetupSuite() {
@@ -85,6 +87,11 @@ func (s *RemoteConfigSuite) TestvalidateConfigWithReflection() {
 		Location: &storageLocation,
 	}
 
+	testStr := "value"
+	strMap := map[string]*string{
+		"test": &testStr,
+	}
+
 	c := &SampleConfig{
 		SQSQueue:           sqsQueue,
 		SQSClient:          sqsClient,
@@ -93,6 +100,7 @@ func (s *RemoteConfigSuite) TestvalidateConfigWithReflection() {
 		Str:                &str,
 		StorageConfig:      storageConfig,
 		StorageConfigSlice: []*StorageConfig{storageConfig},
+		StrMap:             strMap,
 	}
 
 	err := validateConfigWithReflection(c)
@@ -131,6 +139,11 @@ func (s *RemoteConfigSuite) TestvalidateConfigWithReflectionWithOptional() {
 		Location: &storageLocation,
 	}
 
+	testStr := "value"
+	strMap := map[string]*string{
+		"test": &testStr,
+	}
+
 	c := &SampleConfig{
 		SQSQueueOptional:           sqsQueue,
 		SQSClientOptional:          sqsClient,
@@ -139,6 +152,7 @@ func (s *RemoteConfigSuite) TestvalidateConfigWithReflectionWithOptional() {
 		StrOptional:                &str,
 		StorageConfigOptional:      storageConfig,
 		StorageConfigSliceOptional: []*StorageConfig{storageConfig},
+		StrMapOptional:             strMap,
 		SQSQueue:                   sqsQueue,
 		SQSClient:                  sqsClient,
 		DynamoDBTable:              dynamodbTable,
@@ -146,6 +160,7 @@ func (s *RemoteConfigSuite) TestvalidateConfigWithReflectionWithOptional() {
 		Str:                        &str,
 		StorageConfig:              storageConfig,
 		StorageConfigSlice:         []*StorageConfig{storageConfig},
+		StrMap:                     strMap,
 	}
 
 	err := validateConfigWithReflection(c)
@@ -517,6 +532,11 @@ func (s *RemoteConfigSuite) TestvalidateConfigWithReflectionErrorStorageConfigSl
 	assert.Equal(s.T(), errors.New("Slice Field: StorageConfigSlice, is empty"), err)
 }
 
+func (s *RemoteConfigSuite) TestvalidateConfigWithReflectionErrorEmptyString() {
+	err := validateConfigWithReflection("")
+	assert.NotNil(s.T(), err)
+}
+
 func (s *RemoteConfigSuite) TestLoadConfigFromS3Error() {
 	c := &SQSQueueConfig{}
 	err := LoadConfigFromS3("invalid", AWSRegion("invalid"), VALID_REMOTE_CONFIG_NO_ENDPOINT, c)
@@ -555,7 +575,10 @@ func (s *RemoteConfigSuite) TestdownloadJSONValidate() {
 		{
 			"provider" : "aws",
 			"location" : "us-east-1"
-		}]
+		}],
+		"str_map" : {
+			"mapkey" : "mapvalue"
+		}
 	}`
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
